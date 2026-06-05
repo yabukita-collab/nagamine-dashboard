@@ -50,15 +50,15 @@ tr.detail-row td{padding:0}
 <body>
 <header>
   <h1>Nagamine Sales Dashboard</h1>
-  <span class="date">2026年06月05日 17:49 JST</span>
+  <span class="date">2026年06月06日 08:41 JST</span>
 </header>
 <main>
 
 <section>
   <h2>Summary</h2>
   <div class="kpi-grid">
-    <div class="kpi-card"><div class="label">総件数</div><div class="value">54</div><div class="sub">全案件</div></div>
-    <div class="kpi-card"><div class="label">対応待ち</div><div class="value">37</div><div class="sub">初回接触 / サンプル / 見積 / 交渉</div></div>
+    <div class="kpi-card"><div class="label">総件数</div><div class="value">55</div><div class="sub">全案件</div></div>
+    <div class="kpi-card"><div class="label">対応待ち</div><div class="value">38</div><div class="sub">初回接触 / サンプル / 見積 / 交渉</div></div>
     <div class="kpi-card"><div class="label">取引継続</div><div class="value">3</div><div class="sub">アクティブ顧客</div></div>
     <div class="kpi-card"><div class="label">今月更新</div><div class="value">18</div><div class="sub">2026年06月</div></div>
   </div>
@@ -225,6 +225,8 @@ INV-20264（USD 41.00）PDF添付で送付済み（2026-06-04）。PayPal支払�
 <tr class="detail-row hidden"><td colspan="6"><div class="detail-box"><div><span class="dl">Confirmed Facts</span>タイ。抹茶ビジネスを開始予定。2026年産サンプル希望（2026-05-01）。</div><div><span class="dl">Interest</span>抹茶</div></div></td></tr>
 <tr class="data-row" style="background:rgba(144,164,174,0.06)" data-search="c054 sony francis / family fruit tree llc (customersupport@familyfruittree.com) ae 初回接触 " data-stage="初回接触" data-country="AE" onclick="toggleDetail(this)"><td>C054</td><td>Sony Francis / Family Fruit Tree LLC (customersupport@familyfruittree.com)</td><td>AE</td><td><span style="background:#90a4ae;color:#1a2744;padding:2px 9px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">初回接触</span></td><td></td><td>2026-06-05</td></tr>
 <tr class="detail-row hidden"><td colspan="6"><div class="detail-box"><div><span class="dl">Confirmed Facts</span>UAE・ドバイのHORECA/食品サービス向け有機・ビーガン・グルテンフリー商品を扱う会社。クラフトスパークリングティー4品種ギフトに興味。仕様・価格・MOQ・輸出可否を問い合わせ。現行3SKU案内・ハラル未取得を伝えUAE側の必要書類を確認依頼（2026-06-05）。CC: koushik@familyfruittree.com / management@familyfruittree.com</div><div><span class="dl">Interest</span>スパークリングティー</div></div></td></tr>
+<tr class="data-row" style="background:rgba(144,164,174,0.06)" data-search="c055 david shum pui ho / 三井物産リテールトレーディング jp 初回接触 " data-stage="初回接触" data-country="JP" onclick="toggleDetail(this)"><td>C055</td><td>David Shum Pui Ho / 三井物産リテールトレーディング</td><td>JP</td><td><span style="background:#90a4ae;color:#1a2744;padding:2px 9px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">初回接触</span></td><td></td><td></td></tr>
+<tr class="detail-row hidden"><td colspan="6"><div class="detail-box"><div><span class="dl">Interest</span>スパークリング, 抹茶</div></div></td></tr>
       </tbody>
     </table>
   </div>
@@ -242,12 +244,12 @@ const chartOpts = {
 };
 new Chart(document.getElementById('stageChart'),{
   type:'bar',
-  data:{labels:["初回接触", "見積提示", "出荷中", "サンプル送付", "発注確定", "取引継続", "交渉中", "保留", "終了", "終了(テンプレ型・10日無返信)", "保留(要確認)"],datasets:[{data:[20, 9, 5, 5, 4, 3, 3, 2, 1, 1, 1],backgroundColor:'#4fc3f7',borderRadius:4}]},
+  data:{labels:["初回接触", "見積提示", "出荷中", "サンプル送付", "発注確定", "取引継続", "交渉中", "保留", "終了", "終了(テンプレ型・10日無返信)", "保留(要確認)"],datasets:[{data:[21, 9, 5, 5, 4, 3, 3, 2, 1, 1, 1],backgroundColor:'#4fc3f7',borderRadius:4}]},
   options:chartOpts
 });
 new Chart(document.getElementById('countryChart'),{
   type:'bar',
-  data:{labels:["PH", "TH", "US", "JP", "ID", "CA", "GB", "MX", "SA", "KH"],datasets:[{data:[10, 9, 9, 4, 4, 2, 2, 2, 1, 1],backgroundColor:'#7986cb',borderRadius:4}]},
+  data:{labels:["PH", "TH", "US", "JP", "ID", "CA", "GB", "MX", "SA", "KH"],datasets:[{data:[10, 9, 9, 5, 4, 2, 2, 2, 1, 1],backgroundColor:'#7986cb',borderRadius:4}]},
   options:chartOpts
 });
 
