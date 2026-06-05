@@ -22,13 +22,15 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install gspread google-auth
+        run: pip install gspread google-auth anthropic
 
       - name: Write service account key
         run: echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}' > key.json
 
       - name: Run dashboard script
         run: python dashboard.py
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Commit and push
         run: |

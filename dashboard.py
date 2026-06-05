@@ -8,6 +8,9 @@ from datetime import datetime, timezone, timedelta
 from collections import Counter
 import json
 import html as html_mod
+import os
+import re
+import anthropic
 
 SCOPES = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 creds = Credentials.from_service_account_file('key.json', scopes=SCOPES)
@@ -22,10 +25,70 @@ now_jst = datetime.now(JST)
 now_str = now_jst.strftime('%Y年%m月%d日 %H:%M JST')
 this_month = now_jst.strftime('%Y-%m')
 
-ACTION_STAGES = {'初回接触', 'サンプル送付', '見積提示', '交渉中'}
+# ── Anthropic API: 今日の優先案件を抽出 ─────────────────────
+def fetch_priorities(rows):
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not api_key:
+        print('ANTHROPIC_API_KEY が未設定のためAI分析をスキップします')
+        return []
 
-total = len(rows)
-action_count  = sum(1 for r in rows if r.get('stage', '') in ACTION_STAGES)
+    cases = [
+        {
+            'case_id':          r.get('case_id', ''),
+            'company_contact':  r.get('company_contact', ''),
+            'country':          r.get('country', ''),
+            'stage':            r.get('stage', ''),
+            'last_updated':     r.get('last_updated', ''),
+            'next_action':      r.get('next_action', ''),
+            'confirmed_facts':  str(r.get('confirmed_facts', '') or '')[:120],
+        }
+        for r in rows
+    ]
+
+    prompt = f"""以下の案件リストから「今日対応すべき案件」を抽出してください。
+判断基準:
+- 出荷中・発注確定: 最優先
+- 見積提示から3日以上経過: 高優先
+- サンプル送付から3日以上経過: 高優先
+- 初回接触から7日以上経過: 中優先
+- last_updatedが空の案件: 確認必要
+
+各案件について以下のJSON形式で返してください:
+[{{"case_id": "C001", "priority": "最優先/高優先/中優先", "reason": "理由を20字以内で", "action": "具体的なアクションを30字以内で"}}]
+
+JSON配列のみを返してください。余分なテキストや```は不要です。
+
+案件データ:
+{json.dumps(cases, ensure_ascii=False)}"""
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        message = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=2048,
+            system='あなたは長峰製茶の海外営業アシスタントです。',
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        text = message.content[0].text.strip()
+        # マークダウンコードブロックを除去
+        text = re.sub(r'^```(?:json)?\s*', '', text)
+        text = re.sub(r'\s*```$', '', text)
+        result = json.loads(text)
+        print(f'AI分析完了: {len(result)}件の優先案件を抽出')
+        return result
+    except Exception as ex:
+        print(f'AI分析エラー: {ex}')
+        return []
+
+priorities = fetch_priorities(rows)
+
+# 優先度別カウント
+prio_total  = len(priorities)
+prio_high   = sum(1 for p in priorities if p.get('priority') in ('最優先', '高優先'))
+
+# 既存集計
+ACTION_STAGES = {'初回接触', 'サンプル送付', '見積提示', '交渉中'}
+total         = len(rows)
 cont_count    = sum(1 for r in rows if r.get('stage', '') == '取引継続')
 monthly_count = sum(1 for r in rows if str(r.get('last_updated', '')).strip().startswith(this_month))
 
@@ -63,6 +126,12 @@ ROW_BG = {
     '出荷中':      'rgba(38,198,218,0.07)',
 }
 
+PRIO_STYLE = {
+    '最優先': ('bg:#ef5350;color:#fff',  '#ef5350'),
+    '高優先': ('bg:#f8961e;color:#1a2744', '#f8961e'),
+    '中優先': ('bg:#f9c74f;color:#1a2744', '#f9c74f'),
+}
+
 def e(val):
     return html_mod.escape(str(val) if val is not None else '', quote=True)
 
@@ -76,7 +145,47 @@ def search_attr(r, stage, country):
     parts = [r.get('case_id',''), r.get('company_contact',''), country, stage, r.get('next_action','')]
     return e(' '.join(str(p) for p in parts))
 
-# ── 全案件テーブル HTML ────────────────────────────────────
+# ── 優先案件セクション HTML ───────────────────────────────
+# case_id → company_contact の逆引き用マップ
+case_map = {r.get('case_id', ''): r.get('company_contact', '') for r in rows}
+
+def prio_badge(prio):
+    styles = {'最優先': 'background:#ef5350;color:#fff',
+              '高優先': 'background:#f8961e;color:#1a2744',
+              '中優先': 'background:#f9c74f;color:#1a2744'}
+    s = styles.get(prio, 'background:#546e7a;color:#e8eaf6')
+    return f'<span style="{s};padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">{e(prio)}</span>'
+
+def prio_border(prio):
+    return {'最優先': '#ef5350', '高優先': '#f8961e', '中優先': '#f9c74f'}.get(prio, '#546e7a')
+
+if priorities:
+    prio_order = {'最優先': 0, '高優先': 1, '中優先': 2}
+    sorted_prios = sorted(priorities, key=lambda p: prio_order.get(p.get('priority',''), 9))
+    cards = []
+    for p in sorted_prios:
+        cid     = p.get('case_id', '')
+        prio    = p.get('priority', '')
+        reason  = p.get('reason', '')
+        action  = p.get('action', '')
+        contact = case_map.get(cid, '')
+        border  = prio_border(prio)
+        cards.append(
+            f'<div class="prio-card" style="border-left:4px solid {border}">'
+            f'<div class="prio-header">'
+            f'<span class="prio-id">{e(cid)}</span>'
+            f'{prio_badge(prio)}'
+            f'</div>'
+            f'<div class="prio-company">{e(contact)}</div>'
+            f'<div class="prio-reason">📌 {e(reason)}</div>'
+            f'<div class="prio-action">→ {e(action)}</div>'
+            f'</div>'
+        )
+    priority_section_html = '<div class="prio-grid">' + '\n'.join(cards) + '</div>'
+else:
+    priority_section_html = '<div class="prio-empty">本日の優先案件はありません ✓</div>'
+
+# ── 全案件テーブル HTML ───────────────────────────────────
 table_rows_html_parts = []
 for r in rows:
     stage   = r.get('stage', '')
@@ -89,8 +198,8 @@ for r in rows:
     notes   = r.get('notes', '') or ''
     interest = r.get('interest', '') or ''
 
-    row_bg    = ROW_BG.get(stage, '')
-    search_v  = search_attr(r, stage, country)
+    row_bg   = ROW_BG.get(stage, '')
+    search_v = search_attr(r, stage, country)
 
     data_row = (
         f'<tr class="data-row" style="background:{row_bg}" '
@@ -166,6 +275,14 @@ tr.detail-row td{padding:0}
 .detail-box div{margin-bottom:6px;color:#b0bec5;line-height:1.6}
 .dl{display:inline-block;color:#4fc3f7;font-weight:600;min-width:130px;margin-right:8px}
 .hidden{display:none!important}
+.prio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.prio-card{background:#1e2f52;border-radius:10px;padding:16px 18px;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.prio-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.prio-id{font-size:0.85rem;font-weight:700;color:#e8eaf6}
+.prio-company{font-size:0.82rem;color:#90a4ae;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prio-reason{font-size:0.82rem;color:#cfd8dc;margin-bottom:4px}
+.prio-action{font-size:0.82rem;color:#4fc3f7}
+.prio-empty{background:#1e2f52;border-radius:10px;padding:20px 24px;color:#66bb6a;font-size:0.95rem}
 @media(max-width:700px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
 """
 
@@ -276,12 +393,33 @@ html = f"""<!DOCTYPE html>
 <main>
 
 <section>
+  <h2>今日の優先案件（AI分析）</h2>
+  {priority_section_html}
+</section>
+
+<section>
   <h2>Summary</h2>
   <div class="kpi-grid">
-    <div class="kpi-card"><div class="label">総件数</div><div class="value">{total}</div><div class="sub">全案件</div></div>
-    <div class="kpi-card"><div class="label">対応待ち</div><div class="value">{action_count}</div><div class="sub">初回接触 / サンプル / 見積 / 交渉</div></div>
-    <div class="kpi-card"><div class="label">取引継続</div><div class="value">{cont_count}</div><div class="sub">アクティブ顧客</div></div>
-    <div class="kpi-card"><div class="label">今月更新</div><div class="value">{monthly_count}</div><div class="sub">{now_jst.strftime('%Y年%m月')}</div></div>
+    <div class="kpi-card" style="border-top-color:#ef5350">
+      <div class="label">今日の優先案件</div>
+      <div class="value" style="color:#ef5350">{prio_total}</div>
+      <div class="sub">AI抽出</div>
+    </div>
+    <div class="kpi-card" style="border-top-color:#f8961e">
+      <div class="label">高優先度以上</div>
+      <div class="value" style="color:#f8961e">{prio_high}</div>
+      <div class="sub">最優先＋高優先</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">取引継続</div>
+      <div class="value">{cont_count}</div>
+      <div class="sub">アクティブ顧客</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">今月更新</div>
+      <div class="value">{monthly_count}</div>
+      <div class="sub">{now_jst.strftime('%Y年%m月')}</div>
+    </div>
   </div>
 </section>
 
@@ -336,4 +474,4 @@ with open(out_path, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print(f"出力完了: {out_path}")
-print(f"総件数:{total} / 対応待ち:{action_count} / 取引継続:{cont_count} / 今月更新:{monthly_count}")
+print(f"優先案件:{prio_total}件（高優先以上:{prio_high}件）/ 取引継続:{cont_count} / 今月更新:{monthly_count}")
