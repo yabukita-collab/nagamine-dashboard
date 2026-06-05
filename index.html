@@ -44,23 +44,74 @@ tr.detail-row td{padding:0}
 .detail-box div{margin-bottom:6px;color:#b0bec5;line-height:1.6}
 .dl{display:inline-block;color:#4fc3f7;font-weight:600;min-width:130px;margin-right:8px}
 .hidden{display:none!important}
+.prio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.prio-card{background:#1e2f52;border-radius:10px;padding:16px 18px;box-shadow:0 4px 14px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:8px}
+.prio-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.prio-left{display:flex;flex-direction:column;gap:5px;min-width:0}
+.prio-company{font-size:0.95rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prio-country-badge{display:inline-block;background:#263659;color:#90a4ae;padding:1px 7px;border-radius:4px;font-size:0.72em;font-weight:600;width:fit-content}
+.prio-id{font-size:0.75rem;color:#546e7a;white-space:nowrap;flex-shrink:0;padding-top:2px}
+.prio-middle{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.prio-reason{font-size:0.82rem;color:#cfd8dc}
+.prio-action{font-size:0.82rem;color:#4fc3f7}
+.prio-empty{background:#1e2f52;border-radius:10px;padding:20px 24px;color:#66bb6a;font-size:0.95rem}
 @media(max-width:700px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 <header>
   <h1>Nagamine Sales Dashboard</h1>
-  <span class="date">2026年06月06日 08:41 JST</span>
+  <span class="date">2026年06月06日 08:59 JST</span>
 </header>
 <main>
 
 <section>
+  <h2>今日の優先案件（AI分析）</h2>
+  <div class="prio-grid"><div class="prio-card" style="border-left:4px solid #ef5350"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Samach Ngarmsomsup (M Media Marketing &amp; Consultant)</div>    <span class="prio-country-badge">TH</span>  </div>  <span class="prio-id">C001</span></div><div class="prio-middle">  <span style="background:#ef5350;color:#fff;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">最優先</span>  <span class="prio-reason">出荷中。残10kg加工・発送待ち</span></div><div class="prio-action">→ 粉末加工完了状況確認、インボイス発行、出荷手配</div></div>
+<div class="prio-card" style="border-left:4px solid #ef5350"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Kristen Capili (mylittleteastore@gmail.com)</div>    <span class="prio-country-badge">JP</span>  </div>  <span class="prio-id">C003</span></div><div class="prio-middle">  <span style="background:#ef5350;color:#fff;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">最優先</span>  <span class="prio-reason">発注確定。次回卸注文対応待ち</span></div><div class="prio-action">→ 顧客フォローアップ、次回注文予定を確認</div></div>
+<div class="prio-card" style="border-left:4px solid #ef5350"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Naporn (Thailand)</div>    <span class="prio-country-badge">TH</span>  </div>  <span class="prio-id">C016</span></div><div class="prio-middle">  <span style="background:#ef5350;color:#fff;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">最優先</span>  <span class="prio-reason">発注確定。出荷スケジュール確認待ち</span></div><div class="prio-action">→ 出荷日程を確定、インボイス準備</div></div>
+<div class="prio-card" style="border-left:4px solid #ef5350"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Isaraporn (Thailand)</div>    <span class="prio-country-badge">TH</span>  </div>  <span class="prio-id">C017</span></div><div class="prio-middle">  <span style="background:#ef5350;color:#fff;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">最優先</span>  <span class="prio-reason">発注確定。出荷スケジュール確認待ち</span></div><div class="prio-action">→ 出荷日程を確定、インボイス準備</div></div>
+<div class="prio-card" style="border-left:4px solid #ef5350"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Adrian Kataoka (chajin.co)</div>      </div>  <span class="prio-id">C021</span></div><div class="prio-middle">  <span style="background:#ef5350;color:#fff;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">最優先</span>  <span class="prio-reason">出荷中。Wise不調でPayPal切替対応中</span></div><div class="prio-action">→ 出荷状況確認、PayPal決済確認</div></div>
+<div class="prio-card" style="border-left:4px solid #ef5350"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Bianca Ilustre / Kura Matcha</div>    <span class="prio-country-badge">PH</span>  </div>  <span class="prio-id">C028</span></div><div class="prio-middle">  <span style="background:#ef5350;color:#fff;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">最優先</span>  <span class="prio-reason">出荷中。6/3-4のEMS発送予定</span></div><div class="prio-action">→ EMS発送状況確認、追跡番号対応</div></div>
+<div class="prio-card" style="border-left:4px solid #ef5350"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Montserrat Varela</div>    <span class="prio-country-badge">MX</span>  </div>  <span class="prio-id">C034</span></div><div class="prio-middle">  <span style="background:#ef5350;color:#fff;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">最優先</span>  <span class="prio-reason">出荷中。年50kg・拡大希望の重要顧客</span></div><div class="prio-action">→ 出荷状況確認、次回注文予定を打ち合わせ</div></div>
+<div class="prio-card" style="border-left:4px solid #ef5350"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Mia Go</div>    <span class="prio-country-badge">PH</span>  </div>  <span class="prio-id">C044</span></div><div class="prio-middle">  <span style="background:#ef5350;color:#fff;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">最優先</span>  <span class="prio-reason">発注確定。累計30kg購入。次回20-30kg検討中</span></div><div class="prio-action">→ 6/4返事待ち確認、次回注文詳細を調整</div></div>
+<div class="prio-card" style="border-left:4px solid #ef5350"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Muhamad Al Fatur</div>    <span class="prio-country-badge">QA</span>  </div>  <span class="prio-id">C048</span></div><div class="prio-middle">  <span style="background:#ef5350;color:#fff;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">最優先</span>  <span class="prio-reason">出荷中。6/2発送完了。次回USD130/kg予告</span></div><div class="prio-action">→ 発送確認、次回注文予定を確認</div></div>
+<div class="prio-card" style="border-left:4px solid #f8961e"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">齋藤圭祐 (Yokohamaya)</div>    <span class="prio-country-badge">JP</span>  </div>  <span class="prio-id">C009</span></div><div class="prio-middle">  <span style="background:#f8961e;color:#1a2744;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">高優先</span>  <span class="prio-reason">見積提示から55日以上経過</span></div><div class="prio-action">→ 相手の判断進捗を確認、フォローアップ</div></div>
+<div class="prio-card" style="border-left:4px solid #f8961e"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Nika Füleki</div>    <span class="prio-country-badge">SI</span>  </div>  <span class="prio-id">C031</span></div><div class="prio-middle">  <span style="background:#f8961e;color:#1a2744;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">高優先</span>  <span class="prio-reason">サンプル送付から3日以上経過</span></div><div class="prio-action">→ サンプル受取確認、岡部やぶきた入荷待ち進捗確認</div></div>
+<div class="prio-card" style="border-left:4px solid #f8961e"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Hazel</div>    <span class="prio-country-badge">SG</span>  </div>  <span class="prio-id">C035</span></div><div class="prio-middle">  <span style="background:#f8961e;color:#1a2744;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">高優先</span>  <span class="prio-reason">見積提示から3日以上経過。シンガポール卸</span></div><div class="prio-action">→ サンプル受取確認、本注文意向を確認</div></div>
+<div class="prio-card" style="border-left:4px solid #f8961e"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Kwanjira Maiwan / Midland</div>    <span class="prio-country-badge">TH</span>  </div>  <span class="prio-id">C036</span></div><div class="prio-middle">  <span style="background:#f8961e;color:#1a2744;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">高優先</span>  <span class="prio-reason">見積提示から3日以上経過。大型案件</span></div><div class="prio-action">→ サンプル受取確認、大量注文可能性を検証</div></div>
+<div class="prio-card" style="border-left:4px solid #f8961e"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Roy Vida Rodrigueza</div>    <span class="prio-country-badge">PH</span>  </div>  <span class="prio-id">C037</span></div><div class="prio-middle">  <span style="background:#f8961e;color:#1a2744;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">高優先</span>  <span class="prio-reason">見積提示から3日以上経過</span></div><div class="prio-action">→ サンプル受取確認、本注文意向を確認</div></div>
+<div class="prio-card" style="border-left:4px solid #f8961e"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Richard Ribeiro / Superwow Coffee</div>    <span class="prio-country-badge">US</span>  </div>  <span class="prio-id">C040</span></div><div class="prio-middle">  <span style="background:#f8961e;color:#1a2744;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">高優先</span>  <span class="prio-reason">last_updated空欄。見積提示済み5品種サンプル</span></div><div class="prio-action">→ 住所確認、注文進捗の追跡・決済処理</div></div>
+<div class="prio-card" style="border-left:4px solid #f8961e"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Fai / Kyozen Matcha</div>    <span class="prio-country-badge">MY</span>  </div>  <span class="prio-id">C041</span></div><div class="prio-middle">  <span style="background:#f8961e;color:#1a2744;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">高優先</span>  <span class="prio-reason">last_updated空欄。見積提示済みサンプル対応中</span></div><div class="prio-action">→ 住所・支払方法確認、サンプル発送準備</div></div>
+<div class="prio-card" style="border-left:4px solid #f8961e"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Elizabeth Morales / The Tea Lizard</div>    <span class="prio-country-badge">US</span>  </div>  <span class="prio-id">C042</span></div><div class="prio-middle">  <span style="background:#f8961e;color:#1a2744;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">高優先</span>  <span class="prio-reason">last_updated空欄。見積提示済み、友人経由対応</span></div><div class="prio-action">→ 友人住所確認、サンプル発送準備</div></div>
+<div class="prio-card" style="border-left:4px solid #f8961e"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Xin Liu</div>    <span class="prio-country-badge">JP</span>  </div>  <span class="prio-id">C043</span></div><div class="prio-middle">  <span style="background:#f8961e;color:#1a2744;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">高優先</span>  <span class="prio-reason">last_updated空欄。見積提示済み、情報確認中</span></div><div class="prio-action">→ 住所・業態・数量確認、決済処理</div></div>
+<div class="prio-card" style="border-left:4px solid #f8961e"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">クイニー・パトリシア / AOI Matcha (aoimatcha.id@gmail.com)</div>    <span class="prio-country-badge">ID</span>  </div>  <span class="prio-id">C045</span></div><div class="prio-middle">  <span style="background:#f8961e;color:#1a2744;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">高優先</span>  <span class="prio-reason">サンプル送付から47日以上経過。ホワイトラベル案件</span></div><div class="prio-action">→ サンプル試飲後の進捗確認、ホワイトラベル仕様打ち合わせ</div></div>
+<div class="prio-card" style="border-left:4px solid #f9c74f"><div class="prio-top">  <div class="prio-left">    <div class="prio-company">Hamed Sedaghat</div>    <span class="prio-country-badge">CA</span>  </div>  <span class="prio-id">C024</span></div><div class="prio-middle">  <span style="background:#f9c74f;color:#1a2744;padding:3px 10px;border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">中優先</span>  <span class="prio-reason">last_updated空欄。送信履歴・相手状況要確認</span></div><div class="prio-action">→ メール記録確認、相手の返信有無を確認</div></div></div>
+</section>
+
+<section>
   <h2>Summary</h2>
   <div class="kpi-grid">
-    <div class="kpi-card"><div class="label">総件数</div><div class="value">55</div><div class="sub">全案件</div></div>
-    <div class="kpi-card"><div class="label">対応待ち</div><div class="value">38</div><div class="sub">初回接触 / サンプル / 見積 / 交渉</div></div>
-    <div class="kpi-card"><div class="label">取引継続</div><div class="value">3</div><div class="sub">アクティブ顧客</div></div>
-    <div class="kpi-card"><div class="label">今月更新</div><div class="value">18</div><div class="sub">2026年06月</div></div>
+    <div class="kpi-card" style="border-top-color:#ef5350">
+      <div class="label">今日の優先案件</div>
+      <div class="value" style="color:#ef5350">20</div>
+      <div class="sub">AI抽出</div>
+    </div>
+    <div class="kpi-card" style="border-top-color:#f8961e">
+      <div class="label">高優先度以上</div>
+      <div class="value" style="color:#f8961e">19</div>
+      <div class="sub">最優先＋高優先</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">取引継続</div>
+      <div class="value">3</div>
+      <div class="sub">アクティブ顧客</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">今月更新</div>
+      <div class="value">18</div>
+      <div class="sub">2026年06月</div>
+    </div>
   </div>
 </section>
 

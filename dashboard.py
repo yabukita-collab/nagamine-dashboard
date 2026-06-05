@@ -73,6 +73,10 @@ JSON配列のみを返してください。余分なテキストや```は不要�
         # マークダウンコードブロックを除去
         text = re.sub(r'^```(?:json)?\s*', '', text)
         text = re.sub(r'\s*```$', '', text)
+        # JSON配列部分をregexで抽出（前後の余分なテキストを除去）
+        m = re.search(r'\[[\s\S]*\]', text)
+        if m:
+            text = m.group()
         result = json.loads(text)
         print(f'AI分析完了: {len(result)}件の優先案件を抽出')
         return result
@@ -146,8 +150,8 @@ def search_attr(r, stage, country):
     return e(' '.join(str(p) for p in parts))
 
 # ── 優先案件セクション HTML ───────────────────────────────
-# case_id → company_contact の逆引き用マップ
-case_map = {r.get('case_id', ''): r.get('company_contact', '') for r in rows}
+case_map    = {r.get('case_id', ''): r.get('company_contact', '') for r in rows}
+country_map = {r.get('case_id', ''): str(r.get('country', '') or '') for r in rows}
 
 def prio_badge(prio):
     styles = {'最優先': 'background:#ef5350;color:#fff',
@@ -169,15 +173,24 @@ if priorities:
         reason  = p.get('reason', '')
         action  = p.get('action', '')
         contact = case_map.get(cid, '')
+        country = country_map.get(cid, '')
         border  = prio_border(prio)
+        country_badge = (
+            f'<span class="prio-country-badge">{e(country)}</span>' if country and country != '-' else ''
+        )
         cards.append(
             f'<div class="prio-card" style="border-left:4px solid {border}">'
-            f'<div class="prio-header">'
-            f'<span class="prio-id">{e(cid)}</span>'
-            f'{prio_badge(prio)}'
+            f'<div class="prio-top">'
+            f'  <div class="prio-left">'
+            f'    <div class="prio-company">{e(contact)}</div>'
+            f'    {country_badge}'
+            f'  </div>'
+            f'  <span class="prio-id">{e(cid)}</span>'
             f'</div>'
-            f'<div class="prio-company">{e(contact)}</div>'
-            f'<div class="prio-reason">📌 {e(reason)}</div>'
+            f'<div class="prio-middle">'
+            f'  {prio_badge(prio)}'
+            f'  <span class="prio-reason">{e(reason)}</span>'
+            f'</div>'
             f'<div class="prio-action">→ {e(action)}</div>'
             f'</div>'
         )
@@ -275,12 +288,15 @@ tr.detail-row td{padding:0}
 .detail-box div{margin-bottom:6px;color:#b0bec5;line-height:1.6}
 .dl{display:inline-block;color:#4fc3f7;font-weight:600;min-width:130px;margin-right:8px}
 .hidden{display:none!important}
-.prio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
-.prio-card{background:#1e2f52;border-radius:10px;padding:16px 18px;box-shadow:0 4px 14px rgba(0,0,0,.4)}
-.prio-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.prio-id{font-size:0.85rem;font-weight:700;color:#e8eaf6}
-.prio-company{font-size:0.82rem;color:#90a4ae;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.prio-reason{font-size:0.82rem;color:#cfd8dc;margin-bottom:4px}
+.prio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.prio-card{background:#1e2f52;border-radius:10px;padding:16px 18px;box-shadow:0 4px 14px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:8px}
+.prio-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.prio-left{display:flex;flex-direction:column;gap:5px;min-width:0}
+.prio-company{font-size:0.95rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prio-country-badge{display:inline-block;background:#263659;color:#90a4ae;padding:1px 7px;border-radius:4px;font-size:0.72em;font-weight:600;width:fit-content}
+.prio-id{font-size:0.75rem;color:#546e7a;white-space:nowrap;flex-shrink:0;padding-top:2px}
+.prio-middle{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.prio-reason{font-size:0.82rem;color:#cfd8dc}
 .prio-action{font-size:0.82rem;color:#4fc3f7}
 .prio-empty{background:#1e2f52;border-radius:10px;padding:20px 24px;color:#66bb6a;font-size:0.95rem}
 @media(max-width:700px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
