@@ -2,9 +2,9 @@ name: Update Dashboard
 
 on:
   schedule:
-    - cron: '0 23 * * *'   # JST 8:00
-    - cron: '0 3 * * *'    # JST 12:00
-    - cron: '0 8 * * *'    # JST 17:00
+    - cron: '17 22 * * *'   # JST 7:17
+    - cron: '17 3 * * *'    # JST 12:17
+    - cron: '17 8 * * *'    # JST 17:17
   workflow_dispatch:
 
 permissions:
