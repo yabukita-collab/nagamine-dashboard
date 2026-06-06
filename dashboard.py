@@ -25,27 +25,45 @@ now_jst = datetime.now(JST)
 now_str = now_jst.strftime('%Y年%m月%d日 %H:%M JST')
 this_month = now_jst.strftime('%Y-%m')
 
-# ── Anthropic API: 今日の優先案件を抽出 ─────────────────────
-def fetch_priorities(rows):
+# ── 担当者定義 ────────────────────────────────────────────
+MEMBERS = ['takayuki', 'kayo.tatara', 'kataoka']
+MEMBER_ROLES = {
+    'takayuki':   'LP/メール経由の見積・出荷対応が主な業務です。',
+    'kayo.tatara':'Instagram経由顧客の出荷・発送確認が主な業務です。',
+    'kataoka':    'Instagram経由の新規顧客への初回返信・フォローが主な業務です。',
+}
+
+def member_html_id(name):
+    return 'member-' + name.replace('.', '-')
+
+# owner列でグループ分け
+rows_by_owner = {m: [r for r in rows if r.get('owner', '') == m] for m in MEMBERS}
+
+# ── Anthropic API: 担当者ごとの優先案件を抽出 ────────────────
+def fetch_priorities(owner_rows, owner):
     api_key = os.environ.get('ANTHROPIC_API_KEY', '')
     if not api_key:
-        print('ANTHROPIC_API_KEY が未設定のためAI分析をスキップします')
+        return []
+    if not owner_rows:
         return []
 
+    role_desc = MEMBER_ROLES.get(owner, '')
     cases = [
         {
-            'case_id':          r.get('case_id', ''),
-            'company_contact':  r.get('company_contact', ''),
-            'country':          r.get('country', ''),
-            'stage':            r.get('stage', ''),
-            'last_updated':     r.get('last_updated', ''),
-            'next_action':      r.get('next_action', ''),
-            'confirmed_facts':  str(r.get('confirmed_facts', '') or '')[:120],
+            'case_id':         r.get('case_id', ''),
+            'company_contact': r.get('company_contact', ''),
+            'country':         r.get('country', ''),
+            'stage':           r.get('stage', ''),
+            'last_updated':    r.get('last_updated', ''),
+            'next_action':     r.get('next_action', ''),
+            'confirmed_facts': str(r.get('confirmed_facts', '') or '')[:120],
         }
-        for r in rows
+        for r in owner_rows
     ]
 
-    prompt = f"""以下の案件リストから「今日対応すべき案件」を抽出してください。
+    prompt = f"""担当者の役割: {role_desc}
+
+以下の案件リストから「今日対応すべき案件」を抽出してください。
 判断基準:
 - 出荷中・発注確定: 最優先
 - 見積提示から3日以上経過: 高優先
@@ -70,33 +88,38 @@ JSON配列のみを返してください。余分なテキストや```は不要�
             messages=[{'role': 'user', 'content': prompt}]
         )
         text = message.content[0].text.strip()
-        # マークダウンコードブロックを除去
         text = re.sub(r'^```(?:json)?\s*', '', text)
         text = re.sub(r'\s*```$', '', text)
-        # JSON配列部分をregexで抽出（前後の余分なテキストを除去）
         m = re.search(r'\[[\s\S]*\]', text)
         if m:
             text = m.group()
         result = json.loads(text)
-        print(f'AI分析完了: {len(result)}件の優先案件を抽出')
+        print(f'  [{owner}] AI分析完了: {len(result)}件抽出')
         return result
     except Exception as ex:
-        print(f'AI分析エラー: {ex}')
+        print(f'  [{owner}] AI分析エラー: {ex}')
         return []
 
-priorities = fetch_priorities(rows)
+print('AI分析開始...')
+priorities_by_owner = {m: fetch_priorities(rows_by_owner[m], m) for m in MEMBERS}
 
-# 優先度別カウント
-prio_total  = len(priorities)
-prio_high   = sum(1 for p in priorities if p.get('priority') in ('最優先', '高優先'))
-
-# 既存集計
+# ── 集計（全体・担当者別） ────────────────────────────────
 ACTION_STAGES = {'初回接触', 'サンプル送付', '見積提示', '交渉中'}
 total         = len(rows)
 cont_count    = sum(1 for r in rows if r.get('stage', '') == '取引継続')
 monthly_count = sum(1 for r in rows if str(r.get('last_updated', '')).strip().startswith(this_month))
 
-# ── グラフ用集計 ──────────────────────────────────────────
+def kpi_for(owner_rows, priorities):
+    return {
+        'total':      len(owner_rows),
+        'prio_total': len(priorities),
+        'prio_high':  sum(1 for p in priorities if p.get('priority') in ('最優先', '高優先')),
+        'action':     sum(1 for r in owner_rows if r.get('stage', '') in ACTION_STAGES),
+    }
+
+kpi = {m: kpi_for(rows_by_owner[m], priorities_by_owner[m]) for m in MEMBERS}
+
+# ── グラフ用集計（全体） ──────────────────────────────────
 stage_counter  = Counter(r.get('stage', '不明') for r in rows)
 stage_sorted   = stage_counter.most_common()
 stage_labels   = json.dumps([s for s, _ in stage_sorted], ensure_ascii=False)
@@ -107,7 +130,7 @@ top10 = country_counter.most_common(10)
 country_labels = json.dumps([c for c, _ in top10], ensure_ascii=False)
 country_data   = json.dumps([n for _, n in top10])
 
-# ── ステージバッジ ────────────────────────────────────────
+# ── ヘルパー関数 ──────────────────────────────────────────
 STAGE_COLORS = {
     '初回接触':    ('#90a4ae', '#1a2744'),
     'サンプル送付': ('#4fc3f7', '#1a2744'),
@@ -119,7 +142,6 @@ STAGE_COLORS = {
     '終了':        ('#546e7a', '#e8eaf6'),
     '保留':        ('#8d6e63', '#e8eaf6'),
 }
-
 ROW_BG = {
     '初回接触':    'rgba(144,164,174,0.06)',
     'サンプル送付': 'rgba(79,195,247,0.08)',
@@ -128,12 +150,6 @@ ROW_BG = {
     '取引継続':    'rgba(102,187,106,0.07)',
     '発注確定':    'rgba(206,147,216,0.08)',
     '出荷中':      'rgba(38,198,218,0.07)',
-}
-
-PRIO_STYLE = {
-    '最優先': ('bg:#ef5350;color:#fff',  '#ef5350'),
-    '高優先': ('bg:#f8961e;color:#1a2744', '#f8961e'),
-    '中優先': ('bg:#f9c74f;color:#1a2744', '#f9c74f'),
 }
 
 def e(val):
@@ -145,14 +161,6 @@ def stage_badge(stage):
             f'border-radius:4px;font-size:0.78em;font-weight:bold;white-space:nowrap;">'
             f'{e(stage)}</span>')
 
-def search_attr(r, stage, country):
-    parts = [r.get('case_id',''), r.get('company_contact',''), country, stage, r.get('next_action','')]
-    return e(' '.join(str(p) for p in parts))
-
-# ── 優先案件セクション HTML ───────────────────────────────
-case_map    = {r.get('case_id', ''): r.get('company_contact', '') for r in rows}
-country_map = {r.get('case_id', ''): str(r.get('country', '') or '') for r in rows}
-
 def prio_badge(prio):
     styles = {'最優先': 'background:#ef5350;color:#fff',
               '高優先': 'background:#f8961e;color:#1a2744',
@@ -163,9 +171,15 @@ def prio_badge(prio):
 def prio_border(prio):
     return {'最優先': '#ef5350', '高優先': '#f8961e', '中優先': '#f9c74f'}.get(prio, '#546e7a')
 
-if priorities:
+case_map    = {r.get('case_id', ''): r.get('company_contact', '') for r in rows}
+country_map = {r.get('case_id', ''): str(r.get('country', '') or '') for r in rows}
+
+# ── 優先案件カード HTML（担当者別） ──────────────────────────
+def build_priority_html(priorities):
+    if not priorities:
+        return '<div class="prio-empty">本日の優先案件はありません ✓</div>'
     prio_order = {'最優先': 0, '高優先': 1, '中優先': 2}
-    sorted_prios = sorted(priorities, key=lambda p: prio_order.get(p.get('priority',''), 9))
+    sorted_prios = sorted(priorities, key=lambda p: prio_order.get(p.get('priority', ''), 9))
     cards = []
     for p in sorted_prios:
         cid     = p.get('case_id', '')
@@ -175,34 +189,68 @@ if priorities:
         contact = case_map.get(cid, '')
         country = country_map.get(cid, '')
         border  = prio_border(prio)
-        country_badge = (
-            f'<span class="prio-country-badge">{e(country)}</span>' if country and country != '-' else ''
-        )
+        ctry_badge = (f'<span class="prio-country-badge">{e(country)}</span>'
+                      if country and country != '-' else '')
         cards.append(
             f'<div class="prio-card" style="border-left:4px solid {border}">'
             f'<div class="prio-top">'
             f'  <div class="prio-left">'
             f'    <div class="prio-company">{e(contact)}</div>'
-            f'    {country_badge}'
+            f'    {ctry_badge}'
             f'  </div>'
             f'  <span class="prio-id">{e(cid)}</span>'
             f'</div>'
-            f'<div class="prio-middle">'
-            f'  {prio_badge(prio)}'
+            f'<div class="prio-middle">{prio_badge(prio)}'
             f'  <span class="prio-reason">{e(reason)}</span>'
             f'</div>'
             f'<div class="prio-action">→ {e(action)}</div>'
             f'</div>'
         )
-    priority_section_html = '<div class="prio-grid">' + '\n'.join(cards) + '</div>'
-else:
-    priority_section_html = '<div class="prio-empty">本日の優先案件はありません ✓</div>'
+    return '<div class="prio-grid">' + '\n'.join(cards) + '</div>'
+
+# ── 担当者別セクション HTML ───────────────────────────────
+def build_member_section(owner):
+    mid   = member_html_id(owner)
+    k     = kpi[owner]
+    prios = priorities_by_owner[owner]
+    role  = MEMBER_ROLES[owner]
+    return f"""
+<div id="{mid}" class="member-section hidden">
+  <div class="member-role-desc">{e(role)}</div>
+  <div class="kpi-grid" style="margin-bottom:24px">
+    <div class="kpi-card">
+      <div class="label">担当案件数</div>
+      <div class="value">{k['total']}</div>
+      <div class="sub">全ステージ</div>
+    </div>
+    <div class="kpi-card" style="border-top-color:#f8961e">
+      <div class="label">対応待ち</div>
+      <div class="value" style="color:#f8961e">{k['action']}</div>
+      <div class="sub">初回〜交渉中</div>
+    </div>
+    <div class="kpi-card" style="border-top-color:#ef5350">
+      <div class="label">今日の優先案件</div>
+      <div class="value" style="color:#ef5350">{k['prio_total']}</div>
+      <div class="sub">AI抽出</div>
+    </div>
+    <div class="kpi-card" style="border-top-color:#f9c74f">
+      <div class="label">高優先度以上</div>
+      <div class="value" style="color:#f9c74f">{k['prio_high']}</div>
+      <div class="sub">最優先＋高優先</div>
+    </div>
+  </div>
+  <h2>今日の優先案件（AI分析）</h2>
+  {build_priority_html(prios)}
+</div>"""
+
+member_sections_html = ''.join(build_member_section(m) for m in MEMBERS)
 
 # ── 全案件テーブル HTML ───────────────────────────────────
 table_rows_html_parts = []
 for r in rows:
     stage   = r.get('stage', '')
     country = str(r.get('country', '') or '')
+    owner   = str(r.get('owner', '') or '')
     cid     = r.get('case_id', '')
     contact = r.get('company_contact', '')
     action  = r.get('next_action', '')
@@ -211,14 +259,15 @@ for r in rows:
     notes   = r.get('notes', '') or ''
     interest = r.get('interest', '') or ''
 
-    row_bg   = ROW_BG.get(stage, '')
-    search_v = search_attr(r, stage, country)
+    row_bg  = ROW_BG.get(stage, '')
+    search_v = e(' '.join([cid, contact, country, owner, stage, action]))
 
     data_row = (
         f'<tr class="data-row" style="background:{row_bg}" '
         f'data-search="{search_v.lower()}" '
         f'data-stage="{e(stage)}" '
         f'data-country="{e(country)}" '
+        f'data-owner="{e(owner)}" '
         f'onclick="toggleDetail(this)">'
         f'<td>{e(cid)}</td>'
         f'<td>{e(contact)}</td>'
@@ -228,7 +277,6 @@ for r in rows:
         f'<td>{e(updated)}</td>'
         f'</tr>'
     )
-
     detail_inner = ''
     if facts:
         detail_inner += f'<div><span class="dl">Confirmed Facts</span>{e(facts)}</div>'
@@ -248,7 +296,7 @@ for r in rows:
 
 table_rows_html = '\n'.join(table_rows_html_parts)
 
-# ── HTML出力 ──────────────────────────────────────────────
+# ── CSS / JS / HTML ───────────────────────────────────────
 CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#1a2744;color:#e8eaf6;font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
@@ -288,6 +336,15 @@ tr.detail-row td{padding:0}
 .detail-box div{margin-bottom:6px;color:#b0bec5;line-height:1.6}
 .dl{display:inline-block;color:#4fc3f7;font-weight:600;min-width:130px;margin-right:8px}
 .hidden{display:none!important}
+.member-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.member-btn{padding:10px 24px;border:2px solid #4fc3f7;border-radius:8px;background:transparent;
+  color:#4fc3f7;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all .18s;letter-spacing:.5px}
+.member-btn:hover{background:rgba(79,195,247,.12)}
+.member-btn.active{background:#4fc3f7;color:#1a2744}
+.member-placeholder{color:#546e7a;font-size:0.92rem;padding:8px 0}
+.member-section{margin-top:24px}
+.member-role-desc{font-size:0.82rem;color:#90a4ae;margin-bottom:20px;padding:10px 14px;
+  background:#162240;border-left:3px solid #546e7a;border-radius:0 6px 6px 0}
 .prio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
 .prio-card{background:#1e2f52;border-radius:10px;padding:16px 18px;box-shadow:0 4px 14px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:8px}
 .prio-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
@@ -322,11 +379,34 @@ new Chart(document.getElementById('countryChart'),{{
   options:chartOpts
 }});
 
+let _activeMember = null;
+
+function selectMember(name) {{
+  if (_activeMember === name) {{
+    // 同じボタン再クリックで選択解除
+    _activeMember = null;
+    document.querySelectorAll('.member-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.member-section').forEach(s => s.classList.add('hidden'));
+    document.getElementById('memberPlaceholder').classList.remove('hidden');
+    return;
+  }}
+  _activeMember = name;
+  document.querySelectorAll('.member-btn').forEach(b => {{
+    b.classList.toggle('active', b.dataset.member === name);
+  }});
+  document.querySelectorAll('.member-section').forEach(s => s.classList.add('hidden'));
+  const mid = 'member-' + name.replace(/\\./g, '-');
+  const sec = document.getElementById(mid);
+  if (sec) sec.classList.remove('hidden');
+  document.getElementById('memberPlaceholder').classList.add('hidden');
+}}
+
 function buildDropdowns() {{
-  const stageSet = new Set(), countrySet = new Set();
+  const stageSet = new Set(), countrySet = new Set(), ownerSet = new Set();
   document.querySelectorAll('#allTable tbody tr.data-row').forEach(tr => {{
     if (tr.dataset.stage)   stageSet.add(tr.dataset.stage);
     if (tr.dataset.country) countrySet.add(tr.dataset.country);
+    if (tr.dataset.owner)   ownerSet.add(tr.dataset.owner);
   }});
   const stageEl = document.getElementById('stageFilter');
   [...stageSet].sort().forEach(s => {{
@@ -336,19 +416,25 @@ function buildDropdowns() {{
   [...countrySet].sort().forEach(c => {{
     const o = document.createElement('option'); o.value = c; o.textContent = c; countryEl.appendChild(o);
   }});
+  const ownerEl = document.getElementById('ownerFilter');
+  [...ownerSet].sort().forEach(ow => {{
+    const o = document.createElement('option'); o.value = ow; o.textContent = ow; ownerEl.appendChild(o);
+  }});
 }}
 
 function filterTable() {{
   const q       = document.getElementById('searchBox').value.toLowerCase();
   const stage   = document.getElementById('stageFilter').value;
   const country = document.getElementById('countryFilter').value;
+  const owner   = document.getElementById('ownerFilter').value;
   let visible = 0;
   const dataRows = document.querySelectorAll('#allTable tbody tr.data-row');
   dataRows.forEach(tr => {{
     const detail = tr.nextElementSibling;
     const ok = (!q       || tr.dataset.search.includes(q))
             && (!stage   || tr.dataset.stage   === stage)
-            && (!country || tr.dataset.country === country);
+            && (!country || tr.dataset.country === country)
+            && (!owner   || tr.dataset.owner   === owner);
     tr.classList.toggle('hidden', !ok);
     if (detail && detail.classList.contains('detail-row')) {{
       if (!ok) detail.classList.add('hidden');
@@ -409,34 +495,14 @@ html = f"""<!DOCTYPE html>
 <main>
 
 <section>
-  <h2>今日の優先案件（AI分析）</h2>
-  {priority_section_html}
-</section>
-
-<section>
-  <h2>Summary</h2>
-  <div class="kpi-grid">
-    <div class="kpi-card" style="border-top-color:#ef5350">
-      <div class="label">今日の優先案件</div>
-      <div class="value" style="color:#ef5350">{prio_total}</div>
-      <div class="sub">AI抽出</div>
-    </div>
-    <div class="kpi-card" style="border-top-color:#f8961e">
-      <div class="label">高優先度以上</div>
-      <div class="value" style="color:#f8961e">{prio_high}</div>
-      <div class="sub">最優先＋高優先</div>
-    </div>
-    <div class="kpi-card">
-      <div class="label">取引継続</div>
-      <div class="value">{cont_count}</div>
-      <div class="sub">アクティブ顧客</div>
-    </div>
-    <div class="kpi-card">
-      <div class="label">今月更新</div>
-      <div class="value">{monthly_count}</div>
-      <div class="sub">{now_jst.strftime('%Y年%m月')}</div>
-    </div>
+  <h2>担当者</h2>
+  <div class="member-bar">
+    <button class="member-btn" data-member="takayuki"   onclick="selectMember('takayuki')">takayuki</button>
+    <button class="member-btn" data-member="kayo.tatara" onclick="selectMember('kayo.tatara')">kayo.tatara</button>
+    <button class="member-btn" data-member="kataoka"    onclick="selectMember('kataoka')">kataoka</button>
   </div>
+  <div id="memberPlaceholder" class="member-placeholder">担当者を選択してください</div>
+  {member_sections_html}
 </section>
 
 <section>
@@ -457,8 +523,9 @@ html = f"""<!DOCTYPE html>
   <h2>全案件テーブル</h2>
   <div class="filter-bar">
     <input type="text" id="searchBox" placeholder="キーワードで絞り込み…" oninput="filterTable()">
-    <select id="stageFilter" onchange="filterTable()"><option value="">ステージ：すべて</option></select>
+    <select id="stageFilter"   onchange="filterTable()"><option value="">ステージ：すべて</option></select>
     <select id="countryFilter" onchange="filterTable()"><option value="">国：すべて</option></select>
+    <select id="ownerFilter"   onchange="filterTable()"><option value="">担当者：すべて</option></select>
   </div>
   <div class="count-display" id="countDisplay"></div>
   <div class="table-wrap">
@@ -489,5 +556,7 @@ out_path = 'index.html'
 with open(out_path, 'w', encoding='utf-8') as f:
     f.write(html)
 
-print(f"出力完了: {out_path}")
-print(f"優先案件:{prio_total}件（高優先以上:{prio_high}件）/ 取引継続:{cont_count} / 今月更新:{monthly_count}")
+print(f"\n出力完了: {out_path}")
+for m in MEMBERS:
+    k = kpi[m]
+    print(f"  [{m}] 担当:{k['total']}件 / 優先:{k['prio_total']}件（高優先以上:{k['prio_high']}件）")
