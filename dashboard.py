@@ -163,8 +163,55 @@ JSON配列のみを返してください。余分なテキストや```は不要�
         print(f'  [{owner}] AI分析エラー: {ex}')
         return []
 
+def fetch_comment(owner_rows, owner):
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not api_key or not owner_rows:
+        return ''
+    role_desc = MEMBER_ROLES.get(owner, '')
+    cases = [
+        {
+            'case_id':      r.get('case_id', ''),
+            'company':      r.get('company_contact', ''),
+            'stage':        r.get('stage', ''),
+            'last_updated': r.get('last_updated', ''),
+            'deadline':     r.get('deadline', ''),
+            'next_action':  r.get('next_action', ''),
+        }
+        for r in owner_rows
+    ]
+    prompt = f"""あなたは長峰製茶の海外営業アシスタントです。
+担当者 {owner}（役割: {role_desc}）の本日の重要事項を、以下の観点から1〜3文で簡潔にまとめてください。
+- 今日最も優先すべき案件とその理由
+- 期限が近い・超過している案件への注意喚起
+- 出荷・入金など見落としやすい事項
+
+装飾や挨拶は不要、事実のみ、日本語で。
+
+担当案件:
+{json.dumps(cases, ensure_ascii=False)}"""
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        msg = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=512,
+            system='あなたは長峰製茶の海外営業アシスタントです。',
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        comment = msg.content[0].text.strip()
+        # Markdownの装飾記号を除去
+        comment = re.sub(r'\*{1,3}([^*]*)\*{1,3}', r'\1', comment)
+        comment = re.sub(r'#{1,4}\s*', '', comment)
+        comment = comment.strip()
+        print(f'  [{owner}] AIコメント生成完了')
+        return comment
+    except Exception as ex:
+        print(f'  [{owner}] AIコメントエラー: {ex}')
+        return ''
+
 print('AI分析開始...')
 priorities_by_owner = {m: fetch_priorities(rows_by_owner[m], m) for m in MEMBERS}
+print('AIコメント生成開始...')
+comments_by_owner = {m: fetch_comment(rows_by_owner[m], m) for m in MEMBERS}
 
 # ── 集計 ─────────────────────────────────────────────────
 ACTION_STAGES = {'初回接触', 'サンプル送付', '見積提示', '交渉中'}
@@ -321,12 +368,22 @@ def build_priority_html(owner, priorities):
 
 # ── 担当者別セクション HTML ───────────────────────────────
 def build_member_section(owner):
-    mid  = owner.replace('.', '-')
-    k    = kpi[owner]
-    role = MEMBER_ROLES[owner]
+    mid     = owner.replace('.', '-')
+    k       = kpi[owner]
+    role    = MEMBER_ROLES[owner]
+    comment = comments_by_owner.get(owner, '')
+    comment_html = ''
+    if comment:
+        comment_html = (
+            f'<div class="ai-comment-box">'
+            f'<span class="ai-comment-label">AI 今日のポイント</span>'
+            f'<p class="ai-comment-text">{e(comment)}</p>'
+            f'</div>'
+        )
     return f"""
 <div id="member-{mid}" class="member-section hidden">
   <div class="member-role-desc">{e(role)}</div>
+  {comment_html}
   <div class="kpi-grid" style="margin-bottom:24px">
     <div class="kpi-card">
       <div class="label">担当案件数</div><div class="value">{k['total']}</div>
@@ -443,8 +500,13 @@ h2{color:#4fc3f7;font-size:0.85rem;letter-spacing:1.5px;text-transform:uppercase
 .member-btn.active{background:#4fc3f7;color:#1a2744}
 .member-placeholder{color:#546e7a;font-size:0.92rem;padding:8px 0}
 .member-section{margin-top:24px}
-.member-role-desc{font-size:0.82rem;color:#90a4ae;margin-bottom:20px;padding:10px 14px;
+.member-role-desc{font-size:0.82rem;color:#90a4ae;margin-bottom:16px;padding:10px 14px;
   background:#162240;border-left:3px solid #546e7a;border-radius:0 6px 6px 0}
+.ai-comment-box{background:#162240;border:1px solid #2a3f60;border-left:3px solid #7986cb;
+  border-radius:6px;padding:14px 18px;margin-bottom:20px}
+.ai-comment-label{display:block;font-size:0.72rem;color:#7986cb;font-weight:600;
+  letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase}
+.ai-comment-text{font-size:0.88rem;color:#b0bec5;line-height:1.75;margin:0}
 /* priority cards */
 .prio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:10px}
 .prio-extra{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:10px}
